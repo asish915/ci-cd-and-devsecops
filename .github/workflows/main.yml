@@ -89,10 +89,6 @@ jobs:
     name: Apply Sealed Secrets
     needs: [trivy]
     runs-on: ubuntu-latest
-
-    env:
-      KUBECONFIG: ~/.kube/config  # <- Make KUBECONFIG available in all steps
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -112,13 +108,12 @@ jobs:
 
       - name: Set up Kubeconfig
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
 
       - name: Wait for Controller to be Ready
-        run:  kubectl rollout status deployment/sealed-secrets-controller -n sealed-secrets --timeout=120s
-
+        run: kubectl rollout status deployment/sealed-secrets-controller -n sealed-secrets --timeout=120s
 
       - name: Apply Sealed Secrets
         run: kubectl apply -f k8s/sealed-secret.yaml
@@ -128,8 +123,7 @@ jobs:
           kubectl apply -f k8s/manifests/deployment.yaml
           kubectl apply -f k8s/manifests/service.yaml
 
-      
-  deploy:
+deploy:
     runs-on: ubuntu-latest
     needs: [terraform, tfsec, trivy]
     steps:
