@@ -11,5 +11,5 @@ variable "bucket_name" {
 variable "kms_key_arn" {
   description = "KMS Key ARN used for decryption"
   type        = string
-  default     = "arn:aws:kms:ap-south-1:068760013706:key/90df774d-5ed2-4ca9-a774-dce4dc4b6fc2" # change it
+  default     = "arn:aws:kms:ap-south-1:068760013706:key/2b310d6a-dc34-4ed1-b64e-87bfd1fa3672" # change it
 }
