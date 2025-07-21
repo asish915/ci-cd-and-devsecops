@@ -85,46 +85,48 @@ jobs:
           exit-code: 0
           ignore-unfixed: true
           
-  sealed-secrets: 
-    name: Apply Sealed Secrets
-    needs: [trivy] 
-    runs-on: ubuntu-latest 
-    steps: 
-      - name: Checkout 
-        uses: actions/checkout@v4
+  sealed-secrets:
+  name: Apply Sealed Secrets
+  needs: [trivy]
+  runs-on: ubuntu-latest
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-        
-      - name: Install kubeseal 
-        run: | 
-          wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.5/kubeseal-0.24.5-linux-amd64.tar.gz
-          tar -xvf kubeseal-0.24.5-linux-amd64.tar.gz
-          sudo install kubeseal /usr/local/bin/kubeseal
+  env:
+    KUBECONFIG: ~/.kube/config  # <- Make KUBECONFIG available in all steps
 
-      - name: Set up Kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
-          chmod 600 ~/.kube/config
-          export KUBECONFIG=~/.kube/config
-          
-      - name: Wait for Controller to be Ready
-        env:
-          KUBECONFIG: ~/.kube/config
-        run: kubectl rollout status deployment/sealed-secrets-controller -n kube-system --timeout=60s
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Apply Sealed Secrets 
-        run: kubectl apply -f k8s/sealed-secret.yaml
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy App to Kubernetes
-        run: |
-          kubectl apply -f k8s/manifests/deployment.yaml
-          kubectl apply -f k8s/manifests/service.yaml
+    - name: Install kubeseal
+      run: |
+        wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.5/kubeseal-0.24.5-linux-amd64.tar.gz
+        tar -xvf kubeseal-0.24.5-linux-amd64.tar.gz
+        sudo install kubeseal /usr/local/bin/kubeseal
+
+    - name: Set up Kubeconfig
+      run: |
+        mkdir -p ~/.kube
+        echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+
+    - name: Wait for Controller to be Ready
+      run: kubectl rollout status deployment/sealed-secrets-controller -n kube-system --timeout=120s
+
+    - name: Apply Sealed Secrets
+      run: kubectl apply -f k8s/sealed-secret.yaml
+
+    - name: Deploy App to Kubernetes
+      run: |
+        kubectl apply -f k8s/manifests/deployment.yaml
+        kubectl apply -f k8s/manifests/service.yaml
+
       
   deploy:
     runs-on: ubuntu-latest
