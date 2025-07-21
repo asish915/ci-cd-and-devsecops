@@ -74,9 +74,9 @@ jobs:
           ignore-unfixed: true
 
   sealed-secrets: 
-  name: Apply Sealed Secrets 
-  runs-on: ubuntu-latest 
-  steps: 
+    name: Apply Sealed Secrets 
+    runs-on: ubuntu-latest 
+    steps: 
     - name: Checkout 
       uses: actions/checkout@v4
 
