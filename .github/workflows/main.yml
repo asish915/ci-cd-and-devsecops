@@ -1,23 +1,26 @@
-name: CI/CD automation and deployment 
+name: CI/CD automation and deployment
 
 on:
   push:
     branches:
       - main
 
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  S3_BUCKET: ${{ secrets.S3_BUCKET }}
+  EC2_USER: ${{ secrets.EC2_USER }}
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  EC2_KEY: ${{ secrets.EC2_KEY }}
+  KUBECONFIG: ${{ secrets.KUBECONFIG }}
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
 jobs:
   terraform:
     name: automate terraform
     runs-on: ubuntu-latest
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      EC2_USER: ${{ secrets.EC2_USER }}
-      EC2_HOST: ${{ secrets.EC2_HOST }}
-      EC2_KEY: ${{ secrets.EC2_KEY }}
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -27,7 +30,7 @@ jobs:
         with:
           terraform_version: 1.5.0
 
-      - name: Terraform Init
+      - name: Initialising terraform
         run: terraform init
 
       - name: Terraform Format
@@ -53,71 +56,75 @@ jobs:
         uses: aquasecurity/tfsec-action@v1.0.0
 
   trivy:
-    name: trivy Scan (Docker Image)
+    name: Trivy Scan (Docker Image)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Docker
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Build Docker image
-        run: docker build -t vite-app:latest -f vite-app/Dockerfile vite-app
+        run: docker build -t asish915/vite-app:latest -f vite-app/Dockerfile vite-app
+
+      - name: Push Docker Image
+        run: docker push asish915/vite-app:latest
 
       - name: Scan Docker image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: vite-app:latest
+          image-ref: asish915/vite-app:latest
           format: table
           exit-code: 0
           ignore-unfixed: true
-
+          
   sealed-secrets: 
     name: Apply Sealed Secrets 
     runs-on: ubuntu-latest 
     steps: 
-    - name: Checkout 
-      uses: actions/checkout@v4
+      - name: Checkout 
+        uses: actions/checkout@v4
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
         
-    - name: Install kubeseal 
-      run: | 
-        wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.5/kubeseal-0.24.5-linux-amd64.tar.gz
-        tar -xvf kubeseal-0.24.5-linux-amd64.tar.gz
-        sudo install kubeseal /usr/local/bin/kubeseal
+      - name: Install kubeseal 
+        run: | 
+          wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.5/kubeseal-0.24.5-linux-amd64.tar.gz
+          tar -xvf kubeseal-0.24.5-linux-amd64.tar.gz
+          sudo install kubeseal /usr/local/bin/kubeseal
 
-    - name: Set up Kubeconfig
-      run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
 
-    - name: Wait for Controller to be Ready
-      run: |
-        kubectl rollout status deployment/sealed-secrets-controller -n kube-system --timeout=60s
+      - name: Wait for Controller to be Ready
+        run: kubectl rollout status deployment/sealed-secrets-controller -n kube-system --timeout=60s
 
-    - name: Apply Sealed Secrets 
-      run: |
-        kubectl apply -f k8s/sealed-secret.yaml
+      - name: Apply Sealed Secrets 
+        run: kubectl apply -f k8s/sealed-secret.yaml
 
-    - name: Deploy App to Kubernetes
-      run: |
-        kubectl apply -f k8s/manifests/deployment.yaml
-        kubectl apply -f k8s/manifests/service.yaml
+      - name: Deploy App to Kubernetes
+        run: |
+          kubectl apply -f k8s/manifests/deployment.yaml
+          kubectl apply -f k8s/manifests/service.yaml
       
-         
-
   deploy:
     runs-on: ubuntu-latest
     needs: [terraform, tfsec, trivy, sealed-secrets]
-
     steps:
       - name: Checkout source code
         uses: actions/checkout@v3
@@ -145,16 +152,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Upload zip to S3
-        run: |
-          aws s3 cp vite-app.zip s3://${{ secrets.S3_BUCKET }}/vite-app.zip
+      - name: Upload zip to S3 bucket
+        run: aws s3 cp vite-app.zip s3://${{ secrets.S3_BUCKET }}/vite-app.zip
 
       - name: Prepare SSH Key
         run: |
           echo "${{ secrets.EC2_KEY }}" | base64 -d > ec2-key.pem
           chmod 600 ec2-key.pem
 
-      - name: Deploy to EC2
+      - name: Deploy to EC2 instance
         run: |
           ssh -o StrictHostKeyChecking=no -i ec2-key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
           echo "Deploying application on EC2 instance"
