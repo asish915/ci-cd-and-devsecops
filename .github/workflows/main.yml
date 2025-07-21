@@ -101,7 +101,7 @@ jobs:
 
       - name: Apply Sealed Secrets 
         run: |
-         kubectl apply -f k8s/sealed-secret.yaml      # Ensure the path is correct
+         kubectl apply -f k8s/sealed-secret.yaml      
          
 
   deploy:
