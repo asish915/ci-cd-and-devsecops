@@ -111,6 +111,8 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+          export KUBECONFIG=~/.kube/config
+
 
           
       - name: Wait for Controller to be Ready
