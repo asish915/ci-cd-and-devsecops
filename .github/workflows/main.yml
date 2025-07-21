@@ -86,7 +86,8 @@ jobs:
           ignore-unfixed: true
           
   sealed-secrets: 
-    name: Apply Sealed Secrets 
+    name: Apply Sealed Secrets
+    needs: [trivy] 
     runs-on: ubuntu-latest 
     steps: 
       - name: Checkout 
