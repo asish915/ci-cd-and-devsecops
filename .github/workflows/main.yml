@@ -109,7 +109,7 @@ jobs:
       - name: Set up Kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig.base64
           chmod 600 ~/.kube/config
           
       - name: Wait for Controller to be Ready
