@@ -18,7 +18,7 @@ spec:
         - name: vite-app
           image: asish915/vite-app:latest  
           ports:
-            - containerPort: 80     # for nginx       
+            - containerPort: 3000           
           env:
             - name: DB_USERNAME
               valueFrom:
