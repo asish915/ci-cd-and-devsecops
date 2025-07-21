@@ -112,10 +112,10 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
           export KUBECONFIG=~/.kube/config
-
-
           
       - name: Wait for Controller to be Ready
+        env:
+          KUBECONFIG: ~/.kube/config
         run: kubectl rollout status deployment/sealed-secrets-controller -n kube-system --timeout=60s
 
       - name: Apply Sealed Secrets 
