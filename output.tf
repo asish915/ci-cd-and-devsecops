@@ -12,11 +12,11 @@ output "s3_bucket_name" {
 }
 output "codepipeline_role_arn" {
   description = "Codepipeline role arn"
-  value = module.iam.codepipeline_role_arn
+  value       = module.iam.codepipeline_role_arn
 }
 output "codebuild_role_arn" {
   description = "Codebuild role arn"
-  value = module.iam.codebuild_role_arn
+  value       = module.iam.codebuild_role_arn
 }
 output "github_connection_name" {
   description = "GitHub CodeStar connection name"
@@ -24,5 +24,5 @@ output "github_connection_name" {
 }
 output "github_codestar_connection_arn" {
   description = "CodeStar connection arn"
-  value = module.iam.github_codestar_connection_arn
+  value       = module.iam.github_codestar_connection_arn
 }

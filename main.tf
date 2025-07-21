@@ -7,7 +7,7 @@ module "s3" {
 module "iam" {
   source                 = "./modules/iam"
   project_name           = var.project_name
-  github_connection_name = "git-connection"
+  github_connection_name = "project-git-connection"
   kms_key_arn            = var.kms_key_arn
 
 }
