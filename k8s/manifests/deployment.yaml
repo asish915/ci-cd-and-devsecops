@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vite-app-deployment
+  labels:
+    app: vite-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vite-app
+  template:
+    metadata:
+      labels:
+        app: vite-app
+    spec:
+      containers:
+        - name: vite-app
+          image: asish915/vite-app:latest  
+          ports:
+            - containerPort: 80     # for nginx       
+          env:
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: project-sealed
+                  key: DBUSERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: project-sealed
+                  key: DBPASSWORD
