@@ -109,17 +109,6 @@ resource "aws_iam_role_policy_attachment" "ec2_policy_attach" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
-
-resource "aws_iam_role_policy_attachment" "ec2_cloudwatch_logs" {
-  role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "ec2_ssm_access" {
-  role       = aws_iam_role.ec2_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
-}
-
 resource "aws_iam_role_policy" "ec2_kms_decrypt" {
   name = "kms-decrypt"
   role = aws_iam_role.ec2_role.id
